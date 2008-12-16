@@ -27,36 +27,21 @@ module ActiveRecord
       #   Example: <tt>acts_as_list :scope => 'todo_list_id = #{todo_list_id} AND completed = 0'</tt>
       def acts_as_list(options = {})
         configuration = { :column => :position, :scope => '1 = 1' }
-        configuration.update(options) if options.is_a? Hash
+        configuration.update options if options.is_a? Hash
 
-        class_eval <<-EOV
-        def position_column
-          '#{ configuration[:column] }'
-        end
+        scope = configuration.delete :scope
+        named_scope :listed_with, if scope.is_a? Symbol
+            scope = "#{ scope }_id".intern if "#{ scope }"[-3..-1] != '_id'
+            proc {|r| { :conditions => { scope => r.send(scope) } } }
+          else
+            proc {|r| { :conditions => r.instance_eval(%Q'"#{ scope }"') } }
+          end
 
-        #{ ActiveRecord::Acts::List.
-            named_scope_definition configuration[:scope] }
-        EOV
+        class_eval "def position_column; '#{ configuration[:column] }' end"
 
         include ActiveRecord::Acts::List::InstanceMethods
         before_destroy :remove_from_list
         before_create :add_to_list_bottom
-      end
-      def self.named_scope_definition(scope)
-        if scope.is_a? Symbol
-          scope = "#{ scope }_id".intern if "#{ scope }"[-3..-1] != '_id'
-          %Q[
-            named_scope :listed_with, proc { |r|
-              {:conditions => {:#{ scope } => r.send(:#{ scope }) }}
-            }
-          ]
-        else
-          %Q[
-            named_scope :listed_with, proc { |r|
-              {:conditions => r.instance_eval {"#{ scope }"}}
-            }
-          ]
-        end
       end
 
       # All the methods available to a record that has had <tt>acts_as_list</tt> specified. Each method works
@@ -66,12 +51,12 @@ module ActiveRecord
       module InstanceMethods
         # Insert the item at the given position (defaults to the top position of 1).
         def insert_at(position = 1)
-          insert_at_position(position)
+          insert_at_position position
         end
 
         # Swap positions with the next lower item, if one exists.
         def move_lower
-          if_listed(true) do
+          transaction_if_listed do
             lower_item.decrement_position
             increment_position
           end
@@ -79,7 +64,7 @@ module ActiveRecord
 
         # Swap positions with the next higher item, if one exists.
         def move_higher
-          if_listed(true) do
+          transaction_if_listed do
             higher_item.increment_position
             decrement_position
           end
@@ -88,7 +73,7 @@ module ActiveRecord
         # Move to the bottom of the list. If the item is already in the list, the items below it have their
         # position adjusted accordingly.
         def move_to_bottom
-          if_listed(true) do
+          transaction_if_listed do
             decrement_positions_on_lower_items
             assume_bottom_position
           end
@@ -97,7 +82,7 @@ module ActiveRecord
         # Move to the top of the list. If the item is already in the list, the items above it have their
         # position adjusted accordingly.
         def move_to_top
-          if_listed(true) do
+          transaction_if_listed do
             increment_positions_on_higher_items
             assume_top_position
           end
@@ -105,7 +90,7 @@ module ActiveRecord
 
         # Removes the item from the list.
         def remove_from_list
-          if_listed(true) do
+          transaction_if_listed do
             decrement_positions_on_lower_items
             update_attribute position_column, nil
           end
@@ -131,9 +116,11 @@ module ActiveRecord
           in_list? && send(position_column) == bottom_position_in_list
         end
 
+        # Returns the position of the next higher item
         def higher_position
           send(position_column).to_i - 1
         end
+        # Returns the position of the next lower item
         def lower_position
           send(position_column).to_i + 1
         end
@@ -154,14 +141,15 @@ module ActiveRecord
           end
         end
 
-        def if_listed(transaction = false)
-          block_given? && in_list? || return
-          transaction ? yield : self.class.transaction { yield }
-        end
-
         # Test if this record is in a list
         def in_list?
           send position_column
+        end
+
+        # Executes given block in transaction if record is in a list
+        def transaction_if_listed
+          block_given? && in_list? || return
+          self.class.transaction { yield }
         end
 
         private

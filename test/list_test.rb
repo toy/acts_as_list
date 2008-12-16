@@ -30,8 +30,7 @@ end
 
 class ListMixin < Mixin
   acts_as_list :column => "pos", :scope => :parent
-
-  def self.table_name() "mixins" end
+  def self.table_name() 'mixins' end
 end
 
 class ListMixinSub1 < ListMixin
@@ -41,7 +40,7 @@ class ListMixinSub2 < ListMixin
 end
 
 class ListWithStringScopeMixin < ActiveRecord::Base
-  acts_as_list :column => "pos", :scope => 'parent_id = #{parent_id}'
+  acts_as_list :column => "pos", :scope => 'parent_id = #{ parent_id }'
 
   def self.table_name() "mixins" end
 end
@@ -95,7 +94,8 @@ class ListTest < Test::Unit::TestCase
 
   def test_injection
     item = ListMixin.new(:parent_id => 1)
-    assert_equal "parent_id = 1", item.scope_condition
+    expected_options = { :conditions => { :parent_id => 1 } }
+    assert_equal expected_options, ListMixin.listed_with(item).proxy_options
     assert_equal "pos", item.position_column
   end
 
@@ -190,9 +190,9 @@ class ListTest < Test::Unit::TestCase
   
   
   def test_remove_from_list_should_then_fail_in_list? 
-    assert_equal true, ListMixin.find(1).in_list?
+    assert_not_nil ListMixin.find(1).in_list?
     ListMixin.find(1).remove_from_list
-    assert_equal false, ListMixin.find(1).in_list?
+    assert_nil ListMixin.find(1).in_list?
   end 
   
   def test_remove_from_list_should_set_position_to_nil 
@@ -271,7 +271,8 @@ class ListSubTest < Test::Unit::TestCase
 
   def test_injection
     item = ListMixin.new("parent_id"=>1)
-    assert_equal "parent_id = 1", item.scope_condition
+    expected_options = { :conditions => { :parent_id => 1 } }
+    assert_equal expected_options, ListMixin.listed_with(item).proxy_options
     assert_equal "pos", item.position_column
   end
 

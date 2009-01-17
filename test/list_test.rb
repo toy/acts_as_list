@@ -1,12 +1,15 @@
 require 'test/unit'
 
 require 'rubygems'
-gem 'activerecord', '>= 1.15.4.7794'
+gem 'activerecord', '>= 2.1'
 require 'active_record'
 
 require "#{File.dirname(__FILE__)}/../init"
 
 ActiveRecord::Base.establish_connection(:adapter => "sqlite3", :dbfile => ":memory:")
+
+#ActiveRecord::Base.logger = ActiveSupport::BufferedLogger.new(STDERR)
+#ActiveRecord::Base.colorize_logging = false
 
 def setup_db
   ActiveRecord::Schema.define(:version => 1) do

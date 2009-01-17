@@ -31,7 +31,7 @@ module ActiveRecord
 
         scope = configuration.delete :scope
         named_scope :listed_with, if scope.is_a? Symbol
-            scope = "#{ scope }_id".intern if "#{ scope }"[-3..-1] != '_id'
+            scope = :"#{ scope }_id" if "#{ scope }"[-3..-1] != '_id'
             proc {|r| { :conditions => { scope => r.send(scope) } } }
           else
             proc {|r| { :conditions => r.instance_eval(%Q'"#{ scope }"') } }
@@ -229,12 +229,14 @@ module ActiveRecord
         end
 
         def insert_at_position(position)
-          remove_from_list
-          increment_positions_on_lower_items(position)
-          self.update_attribute(position_column, position)
+          self.class.transaction do
+            remove_from_list
+            increment_positions_on_lower_items position
+            update_attribute position_column, position
+          end
         end
+
       end 
     end
   end
-
 end

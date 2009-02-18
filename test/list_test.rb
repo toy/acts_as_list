@@ -333,4 +333,9 @@ class ListSubTest < Test::Unit::TestCase
     assert_equal 2, ListMixin.find(4).pos
   end
 
+  def test_reorder_by_ids
+    assert_equal [1, 2, 3, 4], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    ListMixin.order_by_ids([2,4,1,3])
+    assert_equal [2, 4, 1, 3], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+  end
 end

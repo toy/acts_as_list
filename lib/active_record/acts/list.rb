@@ -56,17 +56,15 @@ module ActiveRecord
 
         # Swap positions with the next lower item, if one exists.
         def move_lower
-          transaction_if_listed do
-            lower_item.decrement_position
-            increment_position
+          self.class.transaction do
+            lower_item.try(:decrement_position) and increment_position
           end
         end
 
         # Swap positions with the next higher item, if one exists.
         def move_higher
-          transaction_if_listed do
-            higher_item.increment_position
-            decrement_position
+          self.class.transaction do
+            higher_item.try(:increment_position) and decrement_position
           end
         end
 
@@ -129,7 +127,7 @@ module ActiveRecord
         def higher_item
           if in_list?
             higher = "#{ position_column } = #{ higher_position }"
-            self.class.listed_with(self).first :conditions => higher
+            self.class.base_class.listed_with(self).first :conditions => higher
           end
         end
 
@@ -137,7 +135,7 @@ module ActiveRecord
         def lower_item
           if in_list?
             higher = "#{ position_column } = #{ lower_position }"
-            self.class.listed_with(self).first :conditions => higher
+            self.class.base_class.listed_with(self).first :conditions => higher
           end
         end
 
@@ -168,7 +166,7 @@ module ActiveRecord
           options[:conditions] = ["#{ self.class.primary_key } NOT IN (?)",
               except.map { |e| e.id }] unless except.empty?
 
-          self.class.listed_with(self).maximum position_column, options
+          self.class.base_class.listed_with(self).maximum position_column, options
         end
 
         # Returns the bottom item
@@ -177,7 +175,7 @@ module ActiveRecord
           options[:conditions] = ["#{ self.class.primary_key } NOT IN (?)",
               except.map { |e| e.id }] unless except.empty?
 
-          self.class.listed_with(self).first options
+          self.class.base_class.listed_with(self).first options
         end
 
         # Forces item to assume the bottom position in the list.
@@ -192,7 +190,7 @@ module ActiveRecord
 
         # This has the effect of moving all the higher items up one.
         def decrement_positions_on_higher_items(position)
-          self.class.listed_with(self).update_all(
+          self.class.base_class.listed_with(self).update_all(
           "#{ position_column } = (#{ position_column } - 1)",
           "#{ position_column } <= #{ position }"
           )
@@ -200,7 +198,7 @@ module ActiveRecord
 
         # This has the effect of moving all the lower items up one.
         def decrement_positions_on_lower_items
-          self.class.listed_with(self).update_all(
+          self.class.base_class.listed_with(self).update_all(
           "#{ position_column } = (#{ position_column } - 1)",
           "#{ position_column } > #{ send position_column }"
           ) if in_list?
@@ -208,7 +206,7 @@ module ActiveRecord
 
         # This has the effect of moving all the higher items down one.
         def increment_positions_on_higher_items
-          self.class.listed_with(self).update_all(
+          self.class.base_class.listed_with(self).update_all(
           "#{ position_column } = (#{ position_column } + 1)",
           "#{ position_column } < #{ send position_column }"
           ) if in_list?
@@ -216,7 +214,7 @@ module ActiveRecord
 
         # This has the effect of moving all the lower items down one.
         def increment_positions_on_lower_items(position)
-          self.class.listed_with(self).update_all(
+          self.class.base_class.listed_with(self).update_all(
           "#{ position_column } = (#{ position_column } + 1)",
           "#{ position_column } >= #{ position }"
           )
@@ -224,7 +222,7 @@ module ActiveRecord
 
         # Increments position (<tt>position_column</tt>) of all items in the list.
         def increment_positions_on_all_items
-          self.class.listed_with(self).
+          self.class.base_class.listed_with(self).
               update_all "#{ position_column } = (#{ position_column } + 1)"
         end
 

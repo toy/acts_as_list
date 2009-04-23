@@ -49,13 +49,10 @@ module ActiveRecord
 
       module SingletonMethods
         def order_by_ids(ids)
+          first = find(ids.first)
           transaction do
             ids.each_with_index do |id, i|
-              position = i + 1
-              item = find(id)
-              unless item[position_column] == position
-                item.insert_at(position)
-              end
+              listed_with(first).update(id, {position_column => i + 1})
             end
           end
         end

@@ -73,17 +73,15 @@ module ActiveRecord
 
         # Swap positions with the next lower item, if one exists.
         def move_lower
-          transaction_if_listed do
-            lower_item.decrement_position
-            increment_position
+          self.class.transaction do
+            lower_item.try(:decrement_position) and increment_position
           end
         end
 
         # Swap positions with the next higher item, if one exists.
         def move_higher
-          transaction_if_listed do
-            higher_item.increment_position
-            decrement_position
+          self.class.transaction do
+            higher_item.try(:increment_position) and decrement_position
           end
         end
 

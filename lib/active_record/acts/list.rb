@@ -36,12 +36,26 @@ module ActiveRecord
           else
             proc {|r| { :conditions => r.instance_eval(%Q'"#{ scope }"') } }
           end
-
-        class_eval "def position_column; '#{ configuration[:column] }' end"
+        
+        cattr_reader :position_column
+        # Assigning a class variable literally from an extended class method is HARD.  http://www.ruby-forum.com/topic/97333
+        class_variable_set :@@position_column, configuration[:column].to_s.dup
 
         include ActiveRecord::Acts::List::InstanceMethods
+        extend ActiveRecord::Acts::List::SingletonMethods
         before_destroy :remove_from_list
         before_create :add_to_list_bottom
+      end
+
+      module SingletonMethods
+        def order_by_ids(ids)
+          first = find(ids.first)
+          transaction do
+            ids.each_with_index do |id, i|
+              listed_with(first).update(id, {position_column => i + 1})
+            end
+          end
+        end
       end
 
       # All the methods available to a record that has had <tt>acts_as_list</tt> specified. Each method works
@@ -233,7 +247,6 @@ module ActiveRecord
             update_attribute position_column, position
           end
         end
-
       end 
     end
   end

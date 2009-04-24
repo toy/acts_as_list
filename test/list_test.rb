@@ -230,7 +230,7 @@ class ListSubTest < Test::Unit::TestCase
 
   def setup
     setup_db
-    (1..4).each { |i| ((i % 2 == 1) ? ListMixinSub1 : ListMixinSub2).create! :pos => i, :parent_id => 5000 }
+    (1..4).each { |i| [ListMixinSub1, ListMixinSub2][i % 2].create! :pos => i, :parent_id => 5000 }
   end
 
   def teardown
@@ -332,10 +332,44 @@ class ListSubTest < Test::Unit::TestCase
     assert_equal 1, ListMixin.find(3).pos
     assert_equal 2, ListMixin.find(4).pos
   end
+end
 
-  def test_reorder_by_ids
-    assert_equal [1, 2, 3, 4], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
-    ListMixin.order_by_ids([2,4,1,3])
-    assert_equal [2, 4, 1, 3], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+class ListOrderByIds < Test::Unit::TestCase
+
+  def setup
+    setup_db
+    (1..8).each { |i| [ListMixinSub1, ListMixinSub2][i % 2].create! :pos => i, :parent_id => 5000 }
+  end
+
+  def teardown
+    teardown_db
+  end
+
+  def test_reorder_by_ids_simple
+    assert_equal [1, 2, 3, 4, 5, 6, 7, 8], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    ListMixin.order_by_ids([3, 1, 8, 4, 2, 7, 6, 5])
+    assert_equal [3, 1, 8, 4, 2, 7, 6, 5], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+  end
+
+  def test_reorder_by_ids_as_strings
+    assert_equal [1, 2, 3, 4, 5, 6, 7, 8], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    ListMixin.order_by_ids(%w(3 1 8 4 2 7 6 5))
+    assert_equal [3, 1, 8, 4, 2, 7, 6, 5], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+  end
+
+  def test_reorder_by_ids_with_extra_items
+    assert_equal [1, 2, 3, 4, 5, 6, 7, 8], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    ListMixin.order_by_ids([3, 9, 1, 10, 8, 20, 4, 11, 2, 0, 7, 3, 3, 3, 6, 5])
+    assert_equal [3, 1, 8, 4, 2, 7, 6, 5], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    assert_equal [2, 5, 1, 4, 8, 7, 6, 3], ListMixin.find(:all, :conditions => 'parent_id = 5000').map(&:pos)
+  end
+
+  def test_reorder_by_ids_without_sertain_items
+    assert_equal [1, 2, 3, 4, 5, 6, 7, 8], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    ListMixin.order_by_ids([3, 1, 8, 4, 2, 7, 6, 5])
+    assert_equal [3, 1, 8, 4, 2, 7, 6, 5], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    ListMixin.order_by_ids([1, 4, 2, 5])
+    assert_equal [1, 4, 2, 5, 3, 8, 7, 6], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    assert_equal [1, 3, 5, 2, 4, 8, 7, 6], ListMixin.find(:all, :conditions => 'parent_id = 5000').map(&:pos)
   end
 end

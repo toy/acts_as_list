@@ -49,10 +49,18 @@ module ActiveRecord
 
       module SingletonMethods
         def order_by_ids(ids)
-          first = find(ids.first)
+          list_by_id = listed_with(find(ids.first)).all.index_by(&:id)
           transaction do
+            position = 1
             ids.each_with_index do |id, i|
-              listed_with(first).update(id, {position_column => i + 1})
+              if item = list_by_id.delete(id.to_i)
+                item.update_attributes(position_column => position)
+                position += 1
+              end
+            end
+            list_by_id.values.sort_by(&position_column.to_sym).each do |item|
+              item.update_attributes(position_column => position)
+              position += 1
             end
           end
         end

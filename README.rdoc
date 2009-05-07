@@ -19,6 +19,16 @@ refactored to make it less obtrusive and more "Ruby on Rails 2.1+"-y.
     acts_as_list :scope => :todo_list
   end
 
+  class TodoItem < ActiveRecord::Base
+    belongs_to :todo_list
+    acts_as_list :scope => 'todo_list_id = #{todo_list_id}' # note single quotes
+  end
+
+  class TodoItem < ActiveRecord::Base
+    belongs_to :todo_list
+    acts_as_list :scope => proc{ ['todo_list_id = ?', todo_list_id] } # evaluated in context of record
+  end
+
   todo_list.first.move_to_bottom
   todo_list.last.move_higher
 

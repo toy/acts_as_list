@@ -21,8 +21,8 @@ module ActiveRecord
       # Configuration options are:
       #
       # * +column+ - specifies the column name to use for keeping the position integer (default: +position+)
-      # * +scope+ - restricts what is to be considered a list. Given a symbol, it'll attach <tt>_id</tt> 
-      #   (if it hasn't already been added) and use that as the foreign key restriction. It's also possible 
+      # * +scope+ - restricts what is to be considered a list. Given a symbol, it'll attach <tt>_id</tt>
+      #   (if it hasn't already been added) and use that as the foreign key restriction. It's also possible
       #   to give it an entire string that is interpolated if you need a tighter scope than just a foreign key.
       #   Example: <tt>acts_as_list :scope => 'todo_list_id = #{todo_list_id} AND completed = 0'</tt>
       def acts_as_list(options = {})
@@ -30,13 +30,18 @@ module ActiveRecord
         configuration.update options if options.is_a? Hash
 
         scope = configuration.delete :scope
-        named_scope :listed_with, if scope.is_a? Symbol
-            scope = :"#{ scope }_id" if "#{ scope }"[-3..-1] != '_id'
-            proc {|r| { :conditions => { scope => r.send(scope) } } }
-          else
-            proc {|r| { :conditions => r.instance_eval(%Q'"#{ scope }"') } }
-          end
-        
+        named_scope :listed_with, case scope
+            when Symbol
+              scope = :"#{ scope }_id" if "#{ scope }"[-3..-1] != '_id'
+              proc {|r| { :conditions => { scope => r.send(scope) } } }
+            when String
+              proc {|r| { :conditions => r.instance_eval(%Q'"#{ scope }"') } }
+            when Proc
+              proc {|r| { :conditions => r.instance_eval(&scope) } }
+            else
+              raise "Unknown type of scope #{scope.inspect}"
+            end
+
         cattr_reader :position_column
         # Assigning a class variable literally from an extended class method is HARD.  http://www.ruby-forum.com/topic/97333
         class_variable_set :@@position_column, configuration[:column].to_s.dup
@@ -255,7 +260,7 @@ module ActiveRecord
             update_attribute position_column, position
           end
         end
-      end 
+      end
     end
   end
 end

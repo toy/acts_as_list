@@ -14,10 +14,15 @@ ActiveRecord::Base.establish_connection(:adapter => "sqlite3", :dbfile => ":memo
 def setup_db
   ActiveRecord::Schema.define(:version => 1) do
     create_table :mixins do |t|
-      t.column :pos, :integer
-      t.column :parent_id, :integer
-      t.column :created_at, :datetime      
-      t.column :updated_at, :datetime
+      t.integer :pos
+      t.belongs_to :parent
+      t.timestamps
+    end
+    create_table :widgets do |t|
+      t.string :type
+      t.integer :pos
+      t.belongs_to :parent
+      t.timestamps
     end
   end
 end
@@ -46,6 +51,14 @@ class ListWithStringScopeMixin < ActiveRecord::Base
   acts_as_list :column => "pos", :scope => 'parent_id = #{ parent_id }'
 
   def self.table_name() "mixins" end
+end
+
+class Widget < ActiveRecord::Base
+  acts_as_list :column => "pos", :scope => :parent
+end
+class WidgetA < Widget
+end
+class WidgetB < Widget
 end
 
 
@@ -190,40 +203,40 @@ class ListTest < Test::Unit::TestCase
     new2.move_higher
     assert_equal [new2, new1, new3], ListMixin.find(:all, :conditions => 'parent_id IS NULL', :order => 'pos')
   end
-  
-  
-  def test_remove_from_list_should_then_fail_in_list? 
+
+
+  def test_remove_from_list_should_then_fail_in_list?
     assert_not_nil ListMixin.find(1).in_list?
     ListMixin.find(1).remove_from_list
     assert_nil ListMixin.find(1).in_list?
-  end 
-  
-  def test_remove_from_list_should_set_position_to_nil 
+  end
+
+  def test_remove_from_list_should_set_position_to_nil
     assert_equal [1, 2, 3, 4], ListMixin.find(:all, :conditions => 'parent_id = 5', :order => 'pos').map(&:id)
-  
-    ListMixin.find(2).remove_from_list 
-  
+
+    ListMixin.find(2).remove_from_list
+
     assert_equal [2, 1, 3, 4], ListMixin.find(:all, :conditions => 'parent_id = 5', :order => 'pos').map(&:id)
-  
+
     assert_equal 1,   ListMixin.find(1).pos
     assert_equal nil, ListMixin.find(2).pos
     assert_equal 2,   ListMixin.find(3).pos
     assert_equal 3,   ListMixin.find(4).pos
-  end 
-  
-  def test_remove_before_destroy_does_not_shift_lower_items_twice 
+  end
+
+  def test_remove_before_destroy_does_not_shift_lower_items_twice
     assert_equal [1, 2, 3, 4], ListMixin.find(:all, :conditions => 'parent_id = 5', :order => 'pos').map(&:id)
-  
-    ListMixin.find(2).remove_from_list 
-    ListMixin.find(2).destroy 
-  
+
+    ListMixin.find(2).remove_from_list
+    ListMixin.find(2).destroy
+
     assert_equal [1, 3, 4], ListMixin.find(:all, :conditions => 'parent_id = 5', :order => 'pos').map(&:id)
-  
+
     assert_equal 1, ListMixin.find(1).pos
     assert_equal 2, ListMixin.find(3).pos
     assert_equal 3, ListMixin.find(4).pos
-  end 
-  
+  end
+
 end
 
 class ListSubTest < Test::Unit::TestCase
@@ -334,7 +347,7 @@ class ListSubTest < Test::Unit::TestCase
   end
 end
 
-class ListOrderByIds < Test::Unit::TestCase
+class ListOrderByIdsTest < Test::Unit::TestCase
 
   def setup
     setup_db
@@ -371,5 +384,22 @@ class ListOrderByIds < Test::Unit::TestCase
     ListMixin.order_by_ids([1, 4, 2, 5])
     assert_equal [1, 4, 2, 5, 3, 8, 7, 6], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
     assert_equal [1, 3, 5, 2, 4, 8, 7, 6], ListMixin.find(:all, :conditions => 'parent_id = 5000').map(&:pos)
+  end
+end
+
+class WidgetTest < Test::Unit::TestCase
+
+  def setup
+    setup_db
+  end
+
+  def teardown
+    teardown_db
+  end
+
+  def test_widgets_of_many_types_should_be_in_same_list
+    (1..8).each { |i| [WidgetA, WidgetB][i % 2].create! :parent_id => 5000 }
+
+    assert_equal [1, 2, 3, 4, 5, 6, 7, 8], Widget.all.map(&:pos)
   end
 end

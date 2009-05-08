@@ -42,6 +42,8 @@ module ActiveRecord
               raise "Unknown type of scope #{scope.inspect}"
             end
 
+        cattr_reader :acts_as_list_class
+        class_variable_set :@@acts_as_list_class, self
         cattr_reader :position_column
         # Assigning a class variable literally from an extended class method is HARD.  http://www.ruby-forum.com/topic/97333
         class_variable_set :@@position_column, configuration[:column].to_s.dup
@@ -83,14 +85,14 @@ module ActiveRecord
 
         # Swap positions with the next lower item, if one exists.
         def move_lower
-          self.class.transaction do
+          acts_as_list_class.transaction do
             lower_item.try(:decrement_position) and increment_position
           end
         end
 
         # Swap positions with the next higher item, if one exists.
         def move_higher
-          self.class.transaction do
+          acts_as_list_class.transaction do
             higher_item.try(:increment_position) and decrement_position
           end
         end
@@ -154,7 +156,7 @@ module ActiveRecord
         def higher_item
           if in_list?
             higher = "#{ position_column } = #{ higher_position }"
-            self.class.listed_with(self).first :conditions => higher
+            acts_as_list_class.listed_with(self).first :conditions => higher
           end
         end
 
@@ -162,7 +164,7 @@ module ActiveRecord
         def lower_item
           if in_list?
             higher = "#{ position_column } = #{ lower_position }"
-            self.class.listed_with(self).first :conditions => higher
+            acts_as_list_class.listed_with(self).first :conditions => higher
           end
         end
 
@@ -174,7 +176,7 @@ module ActiveRecord
         # Executes given block in transaction if record is in a list
         def transaction_if_listed
           block_given? && in_list? || return
-          self.class.transaction { yield }
+          acts_as_list_class.transaction { yield }
         end
 
         private
@@ -190,19 +192,19 @@ module ActiveRecord
         #   bottom_position_in_list    # => 2
         def bottom_position_in_list(*except)
           options = {}
-          options[:conditions] = ["#{ self.class.primary_key } NOT IN (?)",
+          options[:conditions] = ["#{ acts_as_list_class.primary_key } NOT IN (?)",
               except.map { |e| e.id }] unless except.empty?
 
-          self.class.listed_with(self).maximum position_column, options
+          acts_as_list_class.listed_with(self).maximum position_column, options
         end
 
         # Returns the bottom item
         def bottom_item(*except)
           options = {:order => "#{ position_column } DESC"}
-          options[:conditions] = ["#{ self.class.primary_key } NOT IN (?)",
+          options[:conditions] = ["#{ acts_as_list_class.primary_key } NOT IN (?)",
               except.map { |e| e.id }] unless except.empty?
 
-          self.class.listed_with(self).first options
+          acts_as_list_class.listed_with(self).first options
         end
 
         # Forces item to assume the bottom position in the list.
@@ -217,7 +219,7 @@ module ActiveRecord
 
         # This has the effect of moving all the higher items up one.
         def decrement_positions_on_higher_items(position)
-          self.class.listed_with(self).update_all(
+          acts_as_list_class.listed_with(self).update_all(
           "#{ position_column } = (#{ position_column } - 1)",
           "#{ position_column } <= #{ position }"
           )
@@ -225,7 +227,7 @@ module ActiveRecord
 
         # This has the effect of moving all the lower items up one.
         def decrement_positions_on_lower_items
-          self.class.listed_with(self).update_all(
+          acts_as_list_class.listed_with(self).update_all(
           "#{ position_column } = (#{ position_column } - 1)",
           "#{ position_column } > #{ send position_column }"
           ) if in_list?
@@ -233,7 +235,7 @@ module ActiveRecord
 
         # This has the effect of moving all the higher items down one.
         def increment_positions_on_higher_items
-          self.class.listed_with(self).update_all(
+          acts_as_list_class.listed_with(self).update_all(
           "#{ position_column } = (#{ position_column } + 1)",
           "#{ position_column } < #{ send position_column }"
           ) if in_list?
@@ -241,7 +243,7 @@ module ActiveRecord
 
         # This has the effect of moving all the lower items down one.
         def increment_positions_on_lower_items(position)
-          self.class.listed_with(self).update_all(
+          acts_as_list_class.listed_with(self).update_all(
           "#{ position_column } = (#{ position_column } + 1)",
           "#{ position_column } >= #{ position }"
           )
@@ -249,12 +251,12 @@ module ActiveRecord
 
         # Increments position (<tt>position_column</tt>) of all items in the list.
         def increment_positions_on_all_items
-          self.class.listed_with(self).
+          acts_as_list_class.listed_with(self).
               update_all "#{ position_column } = (#{ position_column } + 1)"
         end
 
         def insert_at_position(position)
-          self.class.transaction do
+          acts_as_list_class.transaction do
             remove_from_list
             increment_positions_on_lower_items position
             update_attribute position_column, position

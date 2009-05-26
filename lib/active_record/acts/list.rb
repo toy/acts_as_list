@@ -61,12 +61,12 @@ module ActiveRecord
             position = 1
             ids.each_with_index do |id, i|
               if item = list_by_id.delete(id.to_i)
-                item.update_attributes(position_column => position)
+                item.update_attributes(position_column => position) if item[position_column] != position
                 position += 1
               end
             end
             list_by_id.values.sort_by(&position_column.to_sym).each do |item|
-              item.update_attributes(position_column => position)
+              item.update_attributes(position_column => position) if item[position_column] != position
               position += 1
             end
           end

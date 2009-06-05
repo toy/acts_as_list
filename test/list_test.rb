@@ -385,6 +385,15 @@ class ListOrderByIdsTest < Test::Unit::TestCase
     assert_equal [1, 4, 2, 5, 3, 8, 7, 6], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
     assert_equal [1, 3, 5, 2, 4, 8, 7, 6], ListMixin.find(:all, :conditions => 'parent_id = 5000').map(&:pos)
   end
+
+  def test_reorder_by_ids_with_nil_positions
+    assert_equal [1, 2, 3, 4, 5, 6, 7, 8], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+    ListMixin.find(1).update_attribute(:pos, nil)
+    ListMixin.find(4).update_attribute(:pos, nil)
+    ListMixin.find(8).update_attribute(:pos, nil)
+    ListMixin.order_by_ids([8, 7, 6, 5])
+    assert_equal [8, 7, 6, 5, 1, 4, 2, 3], ListMixin.find(:all, :conditions => 'parent_id = 5000', :order => 'pos').map(&:id)
+  end
 end
 
 class WidgetTest < Test::Unit::TestCase

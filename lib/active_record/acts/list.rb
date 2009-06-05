@@ -65,7 +65,7 @@ module ActiveRecord
                 position += 1
               end
             end
-            list_by_id.values.sort_by(&position_column.to_sym).each do |item|
+            list_by_id.values.sort_by{ |item| item[position_column] || 0 }.each do |item|
               item.update_attributes(position_column => position) if item[position_column] != position
               position += 1
             end

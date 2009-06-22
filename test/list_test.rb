@@ -345,6 +345,14 @@ class ListSubTest < Test::Unit::TestCase
     assert_equal 1, ListMixin.find(3).pos
     assert_equal 2, ListMixin.find(4).pos
   end
+  
+  def test_moving_to_bottom_on_single_item_list
+    mixin = ListMixin.create! :pos => 1, :parent_id => 6
+    assert_nothing_raised(NoMethodError) { mixin.move_to_bottom }
+    assert_equal(1, mixin.pos)
+  end
+  
+  
 end
 
 class ListOrderByIdsTest < Test::Unit::TestCase

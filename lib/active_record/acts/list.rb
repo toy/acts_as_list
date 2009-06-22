@@ -195,7 +195,7 @@ module ActiveRecord
           options[:conditions] = ["#{ acts_as_list_class.primary_key } NOT IN (?)",
               except.map { |e| e.id }] unless except.empty?
 
-          acts_as_list_class.listed_with(self).maximum position_column, options
+          (acts_as_list_class.listed_with(self).maximum position_column, options) || 0 #In case the exception is the only thing in the list
         end
 
         # Returns the bottom item

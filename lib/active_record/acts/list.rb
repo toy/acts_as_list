@@ -52,6 +52,7 @@ module ActiveRecord
         extend ActiveRecord::Acts::List::SingletonMethods
         before_destroy :remove_from_list
         before_create :add_to_list_bottom
+        default_scope :order => position_column
       end
 
       module SingletonMethods

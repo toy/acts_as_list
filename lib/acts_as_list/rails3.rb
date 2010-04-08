@@ -8,16 +8,16 @@ module ActsAsList
     def higher_item
       return nil unless in_list?
       acts_as_list_class.where(
-        "#{scope_condition} AND #{position_column} = #{(send(position_column).to_i - 1).to_s}"
-      ).first
+        "#{scope_condition} AND #{position_column} < #{send(position_column).to_s}"
+      ).order("#{position_column} DESC").first
     end
 
     # Return the next lower item in the list.
     def lower_item
       return nil unless in_list?
       acts_as_list_class.where(
-        "#{scope_condition} AND #{position_column} = #{(send(position_column).to_i + 1).to_s}"
-      ).first
+        "#{scope_condition} AND #{position_column} > #{send(position_column).to_s}"
+      ).order("#{position_column} ASC").first
     end
   
     private

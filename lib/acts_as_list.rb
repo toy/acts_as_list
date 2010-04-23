@@ -1,6 +1,6 @@
-module ActsAsList
+module ActsAsList''
   def acts_as_list(options = {})
-    raise ArgumentError, "Hash expected, got #{options.class.name}" if not options.nil? and not options.is_a?(Hash)
+    raise ArgumentError, "Hash expected, got #{options.class.name}" if not options.is_a?(Hash) and not options.empty?
     
     configuration = { :column => "position", :scope => "1 = 1" }
     configuration.update(options) unless options.nil?
@@ -171,6 +171,6 @@ else
   raise Exception, "Rails 2.x or Rails 3.x expected, got Rails #{Rails::VERSION::MAJOR}.x"
 end
 
-# Extend ActiveRecord functionality
+# Extend ActiveRecord's functionality
 ActiveRecord::Base.extend ActsAsList
 

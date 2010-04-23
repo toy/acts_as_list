@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class ListTest < Test::Unit::TestCase
+class ListTest < ActiveSupport::TestCase
 
   def setup
     setup_db
@@ -176,7 +176,7 @@ class ListTest < Test::Unit::TestCase
   
 end
 
-class ListSubTest < Test::Unit::TestCase
+class ListSubTest < ActiveSupport::TestCase
 
   def setup
     setup_db
